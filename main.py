@@ -4,6 +4,7 @@ import os
 from cryptography.fernet import Fernet
 from utils.encryption import encrypt_password,verify_password
 from utils.pdf_generator import generate_resi_pdf
+from datetime import date
 
 db = mysql.connector.connect(
     host="localhost",
@@ -101,28 +102,74 @@ def dashboard(user):
         else:
             main()
     elif user['role'] == 'Admin':
-        print("Fitur role ini belum tersedia.")
+        print("1. Buat Pengiriman")
+        pilihan = input("Pilih menu: ")
+        print()
+
+        if pilihan == "1":
+            print("=== Buat Pengiriman ===", "\n")
+            print("Silahkan masukkan data-data terkait pengiriman.")
+            user_pengirim = input("Username Pengirim : ")
+            nama_penerima = input("Nama Penerima : ")
+            barang = input("Barang yang Dikirim : ")
+            harga_pengiriman = input("Biaya Pengiriman : ")
+            alamat_pengirim = input("Alamat Pengirim : ")
+            alamat_tujuan = input("Alamat Tujuan : ")
+            tanggal_pengiriman = date.today()
+            tanggal_pengiriman_sql = tanggal_pengiriman.isoformat()
+
+            cursor.execute("SELECT * FROM tPengiriman ORDER BY ID DESC LIMIT 1")
+            id_terakhir = cursor.fetchone()
+
+            cursor.execute("INSERT INTO tPengiriman (id, pengirim, penerima, barang, harga_pengiriman, alamat_pengirim, alamat_tujuan, tanggal_pengiriman) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", (id_terakhir['id']+1, user_pengirim, nama_penerima, barang, harga_pengiriman, alamat_pengirim, alamat_tujuan, tanggal_pengiriman_sql))
+            db.commit()
+
     else:
         kurir_lanjut = True
         while kurir_lanjut == True:
-            print("1. Cek Daftar Pesanan Pengiriman")
-            print("2. Update Status Pengiriman")
+            print("1. Ambil Pesanan Pengiriman")
+            print("2. Cek Daftar Pesanan Pengiriman")
+            print("3. Update Status Pengiriman")
             print("0. Keluar")
             pilihan = input("Pilih menu: ")
             print()
             if pilihan == '1':
+                cursor.execute("SELECT * FROM tPengiriman WHERE kurir = %s", (user['username'],), " and tanggal_sampai is NULL")
+                jumlah_pesanan = cursor.fetchone()
+
+                if jumlah_pesanan is None:
+                    print("=== Pesanan yang dapat Diambil ===", "\n")
+                    cursor.execute("SELECT * FROM tPengiriman WHERE kurir is NULL")
+                    pesanan_yang_ada = cursor.fetchall()
+
+                    for i in range(0, len(pesanan_yang_ada)):
+                        print((i+1), ". Pengiriman", pesanan_yang_ada[i]['barang'], "ke", pesanan_yang_ada[i]['alamat_tujuan'])
+                    print()
+
+                    pilihan = int(input("Pesanan mana yang ingin anda ambil? : "), "\n")
+                    urutan_pengiriman = pilihan
+
+                    id_pengiriman = pesanan_yang_ada[urutan_pengiriman-1]['id']
+
+                    cursor.execute(
+                                    "UPDATE tPengiriman SET kurir = %s WHERE id = %s",
+                                    (user['username'], id_pengiriman))
+                    db.commit()
+                else:
+                    print("Harap selesaikan pesanan pengiriman yang telah anda ambil sebelumnya.", "\n")
+            elif pilihan == '2':
                 print("=== Daftar Pesanan Pengiriman Barang ===", "\n")
                 cursor.execute("SELECT * FROM tPengiriman WHERE kurir = %s", (user['username'],))
                 all_pengiriman = cursor.fetchall()
 
                 for i in range(0, len(all_pengiriman)):
                     print((i+1), ". Pengiriman", all_pengiriman[i]['barang'], "kepada", all_pengiriman[i]['penerima'])
-                    if (all_pengiriman[i]['tanggal_sampai'] == " "):
+                    if (all_pengiriman[i]['tanggal_sampai'] is None):
                         print("Status Pengiriman: Belum Dikirim")
                     else:
                         print("Status Pengiriman: Selesai Dikirim")
                     print()
-            elif pilihan == '2':
+            elif pilihan == '3':
                 print("=== Daftar Pesanan Pengiriman Barang ===", "\n")
                 cursor.execute("SELECT * FROM tPengiriman WHERE kurir = %s", (user['username'],))
                 all_pengiriman = cursor.fetchall()
