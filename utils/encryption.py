@@ -16,7 +16,7 @@ def load_key():
 KEY = load_key()
 cipher = Fernet(KEY)
 
-def encrypt_password(password):
+def encrypt(password):
     return cipher.encrypt(password.encode()).decode()
 
 def verify_password(plain, encrypted):
@@ -25,3 +25,9 @@ def verify_password(plain, encrypted):
     except Exception as e:
         print("Verifikasi gagal:", e)
         return False
+    
+def decrypt(encrypted):
+    return cipher.decrypt(encrypted.encode()).decode()
+
+def mask_phone(phone_number):
+    return phone_number[:4] + "-XXX-" + phone_number[-4:]
