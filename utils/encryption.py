@@ -28,6 +28,3 @@ def verify_password(plain, encrypted):
     
 def decrypt(encrypted):
     return cipher.decrypt(encrypted.encode()).decode()
-
-def mask_phone(phone_number):
-    return phone_number[:4] + "-XXX-" + phone_number[-4:]

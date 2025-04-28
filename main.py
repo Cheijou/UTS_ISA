@@ -3,10 +3,12 @@ import mysql.connector
 import os
 from cryptography.fernet import Fernet
 from utils.encryption import encrypt,verify_password, decrypt
-from utils.encryption import mask_phone
 from utils.pdf_generator import generate_resi_pdf
 from utils.password_sensor import input_password
 from utils.buat_resi import generate_random_resi
+from utils.buat_qr import create_resi_qr, AESCipher
+import tkinter as tk
+from tkinter.filedialog import askopenfilename
 
 from datetime import date
 
@@ -73,6 +75,7 @@ def dashboard(user):
                 resi = generate_random_resi()
                 cursor.execute("SELECT no_resi FROM tPengiriman WHERE no_resi = %s", (resi,))
                 result = cursor.fetchone()
+                create_resi_qr(resi)
                 if result is None:
                     cek_resi = False
             cursor.execute("INSERT INTO tPengiriman (no_resi, pengirim, penerima, barang, harga_pengiriman, alamat_pengirim, alamat_tujuan, tanggal_pengiriman) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", (resi, user['username'], nama_penerima, barang, harga_pengiriman, alamat_pengirim, alamat_tujuan, tanggal_pengiriman_sql))
@@ -82,31 +85,51 @@ def dashboard(user):
             
         elif pilihan == '2':
             print("=== LACAK RESI ===", "\n")
+            file_path = askopenfilename()
             print()
-            resi = input("Masukkan resi yang ingin anda lacak: ")
-            cursor.execute("SELECT * FROM tPengiriman WHERE no_resi = %s", (resi,))
-            all_pengiriman = cursor.fetchall()
+            print("1. Manual \n2. Input QR")
 
-            for i in range(0, len(all_pengiriman)):
-                print((i+1), ". Pengiriman ", all_pengiriman[i]['barang'], " kepada ", all_pengiriman[i]['penerima'])
-            print()
+            pilih_metode = input("Pilih metode pelacakan : ")
             
-            pilihan = int(input("Data pengiriman mana yang ingin anda periksa? : "))
-            id_pengiriman = pilihan
+            if(pilih_metode == "1"):
+                resi = input("Masukkan resi yang ingin anda lacak: ")
+                cursor.execute("SELECT * FROM tPengiriman WHERE no_resi = %s", (resi,))
+                data_pengiriman = cursor.fetchone()
 
-            cursor.execute("SELECT * FROM tPengiriman WHERE id = %s", (id_pengiriman,))
-            data_pengiriman = cursor.fetchone()
+                print("\n", "=== Berikut merupakan detail pengirimannya ===", "\n")
 
-            print("\n", "=== Berikut merupakan detail pengirimannya ===", "\n")
+                print("Barang yang Dikirim : ", data_pengiriman['barang'])
+                print("Tanggal Pengiriman : ", data_pengiriman['tanggal_pengiriman'])
+                print("Pengirim : ", data_pengiriman['pengirim'])
+                print("Penerima : ", data_pengiriman['penerima'])
+                print("Alamat Pengirim : ", data_pengiriman['alamat_pengirim'])
+                print("Alamat Tujuan : ", data_pengiriman['alamat_tujuan'])
+                print("Biaya Pengiriman : ", data_pengiriman['harga_pengiriman'])
+                print("Kurir yang Bertugas : ", data_pengiriman['kurir'], "\n")
+            elif(pilih_metode == "2"):
+                print("=== Input QR Code ===\n")
+                import tkinter as tk
+                from tkinter import filedialog
 
-            print("Barang yang Dikirim : ", data_pengiriman['barang'])
-            print("Tanggal Pengiriman : ", data_pengiriman['tanggal_pengiriman'])
-            print("Pengirim : ", data_pengiriman['pengirim'])
-            print("Penerima : ", data_pengiriman['penerima'])
-            print("Alamat Pengirim : ", data_pengiriman['alamat_pengirim'])
-            print("Alamat Tujuan : ", data_pengiriman['alamat_tujuan'])
-            print("Biaya Pengiriman : ", data_pengiriman['harga_pengiriman'])
-            print("Kurir yang Bertugas : ", data_pengiriman['kurir'], "\n")
+                root = tk.Tk()
+                root.withdraw()
+                root.update()
+                file_path = filedialog.askopenfilename()
+                print("tes")
+                cipher = AESCipher.decrypt(file_path)
+                cursor.execute("SELECT * FROM tPengiriman WHERE no_resi = %s", (cipher,))
+                data_pengiriman = cursor.fetchone()
+
+                print("\n", "=== Berikut merupakan detail pengirimannya ===", "\n")
+
+                print("Barang yang Dikirim : ", data_pengiriman['barang'])
+                print("Tanggal Pengiriman : ", data_pengiriman['tanggal_pengiriman'])
+                print("Pengirim : ", data_pengiriman['pengirim'])
+                print("Penerima : ", data_pengiriman['penerima'])
+                print("Alamat Pengirim : ", data_pengiriman['alamat_pengirim'])
+                print("Alamat Tujuan : ", data_pengiriman['alamat_tujuan'])
+                print("Biaya Pengiriman : ", data_pengiriman['harga_pengiriman'])
+                print("Kurir yang Bertugas : ", data_pengiriman['kurir'], "\n")
 
             cetak = input("Cetak sebagai PDF? (ya / tidak) : ")
 
