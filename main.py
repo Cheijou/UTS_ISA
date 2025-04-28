@@ -6,9 +6,10 @@ from utils.encryption import encrypt,verify_password, decrypt
 from utils.pdf_generator import generate_resi_pdf
 from utils.password_sensor import input_password
 from utils.buat_resi import generate_random_resi
-from utils.buat_qr import create_resi_qr, AESCipher
+from utils.buat_qr import create_resi_qr, read_qr_and_decrypt
 import tkinter as tk
 from tkinter.filedialog import askopenfilename
+import json
 
 from datetime import date
 
@@ -81,11 +82,11 @@ def dashboard(user):
             cursor.execute("INSERT INTO tPengiriman (no_resi, pengirim, penerima, barang, harga_pengiriman, alamat_pengirim, alamat_tujuan, tanggal_pengiriman) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", (resi, user['username'], nama_penerima, barang, harga_pengiriman, alamat_pengirim, alamat_tujuan, tanggal_pengiriman_sql))
             print()
             print("Pengiriman Anda Tercatat, resi anda -->",resi)
+            print("Resi dapat dicetak dengan opsi Lacak Resi -> Input QR Code")
             db.commit()
             
         elif pilihan == '2':
             print("=== LACAK RESI ===", "\n")
-            file_path = askopenfilename()
             print()
             print("1. Manual \n2. Input QR")
 
@@ -108,16 +109,15 @@ def dashboard(user):
                 print("Kurir yang Bertugas : ", data_pengiriman['kurir'], "\n")
             elif(pilih_metode == "2"):
                 print("=== Input QR Code ===\n")
-                import tkinter as tk
-                from tkinter import filedialog
-
                 root = tk.Tk()
                 root.withdraw()
                 root.update()
-                file_path = filedialog.askopenfilename()
+                file_path = askopenfilename(title="Select Image!", filetypes=[("Image Files", ".png;.jpg;*.jpeg")])
                 print("tes")
-                cipher = AESCipher.decrypt(file_path)
-                cursor.execute("SELECT * FROM tPengiriman WHERE no_resi = %s", (cipher,))
+                hasil = read_qr_and_decrypt(file_path)
+                data = json.loads(hasil)
+
+                cursor.execute("SELECT * FROM tPengiriman WHERE no_resi = %s", (data['resi'],))
                 data_pengiriman = cursor.fetchone()
 
                 print("\n", "=== Berikut merupakan detail pengirimannya ===", "\n")
@@ -130,7 +130,6 @@ def dashboard(user):
                 print("Alamat Tujuan : ", data_pengiriman['alamat_tujuan'])
                 print("Biaya Pengiriman : ", data_pengiriman['harga_pengiriman'])
                 print("Kurir yang Bertugas : ", data_pengiriman['kurir'], "\n")
-
             cetak = input("Cetak sebagai PDF? (ya / tidak) : ")
 
             if cetak == "ya":
