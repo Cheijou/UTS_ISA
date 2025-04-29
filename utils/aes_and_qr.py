@@ -15,9 +15,15 @@ def fix_key(key):
         return key.ljust(32, b'\0')  # Isi null byte, bukan space
     return key
 
-# AES Encryption Helper
+def _decrypt_xor(encoded, xor_key=23):
+    return ''.join(chr(ord(c) ^ xor_key) for c in encoded)
+
+_obfuscated = ''.join(chr(ord(c) ^ 23) for c in "Xv9mTq2#zLpKfw0837")
+
 class AESCipher:
-    def __init__(self, key):
+    def __init__(self, key=None):
+        if key is None:
+            key = _decrypt_xor(_obfuscated)
         self.key = fix_key(key)
 
     def encrypt(self, raw):
@@ -49,7 +55,7 @@ def create_resi_qr(resi = ""):
     }
 
     # Encrypt the data
-    cipher = AESCipher("rahasia123")
+    cipher = AESCipher()
     encrypted_data = cipher.encrypt(json.dumps(data_detail))
 
     # Generate QR Code
@@ -65,7 +71,7 @@ def create_resi_qr(resi = ""):
 def read_qr_and_decrypt(path):
     img = Image.open(path)
     decoded_objects = decode(img)
-    cipher = AESCipher("rahasia123")
+    cipher = AESCipher()
     
     for obj in decoded_objects:
         data = obj.data.decode('utf-8')
