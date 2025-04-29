@@ -58,7 +58,9 @@ def create_resi_qr(resi = ""):
     qr.make(fit=True)
 
     img = qr.make_image(fill="black", back_color="white")
-    img.save(f"resi_pengiriman_{resi}.png")
+    nama_file = f"resi_pengiriman_{resi}.png"
+    img.save(nama_file)
+    return nama_file
 
 def read_qr_and_decrypt(path):
     img = Image.open(path)

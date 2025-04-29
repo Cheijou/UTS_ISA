@@ -116,7 +116,7 @@ def dashboard(user):
                     resi = generate_random_resi()
                     cursor.execute("SELECT no_resi FROM tPengiriman WHERE no_resi = %s", (resi,))
                     result = cursor.fetchone()
-                    create_resi_qr(resi)
+                    nama_file = create_resi_qr(resi)
                     if result is None:
                         cek_resi = False
 
@@ -133,6 +133,7 @@ def dashboard(user):
                 print()
 
                 print("Pengiriman Anda Tercatat, resi anda -->",resi)
+                print("Resi anda dicetak dengan nama file -->",nama_file)
                 print("Resi dapat dicetak dengan opsi Lacak Resi -> Input QR Code", "\n")
                 
             elif pilihan == '2':
