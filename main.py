@@ -1,4 +1,3 @@
-
 import mysql.connector
 import os
 from cryptography.fernet import Fernet
@@ -14,6 +13,7 @@ import json
 from datetime import date
 
 db = mysql.connector.connect(
+
     host="localhost",
     user="root",
     password="",
@@ -32,6 +32,10 @@ def login():
 
     if user and verify_password(password, user['password']):
         print(f"Login berhasil sebagai {user['role']}", "\n")
+        global guser
+        guser = username
+        global gpass
+        gpass = password
         return user
     else:
         print("Login gagal.", "\n")
@@ -41,15 +45,21 @@ def register():
     print()
     nama_lengkap = hash_password(input("Nama Lengkap : "))
     username = input("Username: ")
-    password = hash_password(input_password())
-    no_telp = encrypt_data(input("Nomor Telpon : "))
+    password = input_password()
+    hashed = hash_password(password)
+    global guser
+    guser = username
+    global gpass
+    gpass = password
+
+    no_telp = encrypt_data(input("Nomor Telpon : "),guser,gpass)
     role = input("Anda adalah? (kurir/pengirim): ")
     print()
-    cursor.execute("INSERT INTO tUsers (username, password,nama,nomor_telepon, role) VALUES (%s, %s, %s, %s, %s)", (username, password,nama_lengkap,no_telp,role))
+    cursor.execute("INSERT INTO tUsers (username, password,nama,nomor_telepon, role) VALUES (%s, %s, %s, %s, %s)", (username, hashed,nama_lengkap,no_telp,role))
     db.commit()
     print("Registrasi berhasil.", "\n")
 
-def LacakDetailPengiriman(resi):
+def LacakDetailPengiriman(resi,guser,gpass):
     cursor.execute("SELECT p.*, ap.status_pengiriman, ap.lokasi FROM tPengiriman p JOIN tAktivitasPengiriman ap on p.no_resi = ap.tPengiriman_no_resi WHERE p.no_resi = %s", (resi,), " ORDER BY ap.id DESC LIMIT 1")
     data_pengiriman = cursor.fetchone()
 
@@ -57,12 +67,12 @@ def LacakDetailPengiriman(resi):
     if(data_pengiriman['kurir'] is None):
         data_pengiriman['kurir'] = "Sedang Menunggu Kurir..."
 
-    print("Barang yang Dikirim : ", decrypt_data(data_pengiriman['barang']))
+    print("Barang yang Dikirim : ", decrypt_data(data_pengiriman['barang'],guser,gpass))
     print("Tanggal Pengiriman : ", data_pengiriman['tanggal_pengiriman'])
     print("Pengirim : ", data_pengiriman['pengirim'])
     print("Penerima : ", data_pengiriman['penerima'])
-    print("Alamat Pengirim : ", decrypt_data(data_pengiriman['alamat_pengirim']))
-    print("Alamat Tujuan : ", decrypt_data(data_pengiriman['alamat_tujuan']))
+    print("Alamat Pengirim : ", decrypt_data(data_pengiriman['alamat_pengirim'],guser,gpass))
+    print("Alamat Tujuan : ", decrypt_data(data_pengiriman['alamat_tujuan'],guser,gpass))
     print("Biaya Pengiriman : ", data_pengiriman['harga_pengiriman'])
     print("Status Pengiriman : ", data_pengiriman['status_pengiriman'])
     print("Kurir yang Bertugas : ", data_pengiriman['kurir'])
@@ -72,12 +82,12 @@ def LacakDetailPengiriman(resi):
 
     if cetak == "ya":
         data_pengiriman_pdf = {
-            "Barang yang Dikirim ": decrypt_data(data_pengiriman['barang']),
+            "Barang yang Dikirim ": decrypt_data(data_pengiriman['barang'],guser,gpass),
             "Tanggal Pengiriman": data_pengiriman['tanggal_pengiriman'],
             "Pengirim": data_pengiriman['pengirim'],
             "Penerima": data_pengiriman['penerima'],
-            "Alamat Pengirim ": decrypt_data(data_pengiriman['alamat_pengirim']),
-            "Alamat Tujuan": decrypt_data(data_pengiriman['alamat_tujuan']),
+            "Alamat Pengirim ": decrypt_data(data_pengiriman['alamat_pengirim'],guser,gpass),
+            "Alamat Tujuan": decrypt_data(data_pengiriman['alamat_tujuan'],guser,gpass),
             "Biaya Pengiriman": data_pengiriman['harga_pengiriman'],
             "Status Pengiriman": data_pengiriman['status_pengiriman'],
             "Kurir yang Bertugas": data_pengiriman['kurir'],
@@ -116,11 +126,11 @@ def dashboard(user):
                     resi = generate_random_resi()
                     cursor.execute("SELECT no_resi FROM tPengiriman WHERE no_resi = %s", (resi,))
                     result = cursor.fetchone()
-                    nama_file = create_resi_qr(resi)
+                    nama_file = create_resi_qr(resi,guser,gpass)
                     if result is None:
                         cek_resi = False
 
-                cursor.execute("INSERT INTO tPengiriman (no_resi, pengirim, penerima, barang, harga_pengiriman, alamat_pengirim, alamat_tujuan, tanggal_pengiriman) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", (resi, user['username'], nama_penerima, encrypt_data(barang), harga_pengiriman, encrypt_data(alamat_pengirim), encrypt_data(alamat_tujuan), tanggal_pengiriman_sql))
+                cursor.execute("INSERT INTO tPengiriman (no_resi, pengirim, penerima, barang, harga_pengiriman, alamat_pengirim, alamat_tujuan, tanggal_pengiriman) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", (resi, user['username'], nama_penerima, encrypt_data(barang,guser,gpass), harga_pengiriman, encrypt_data(alamat_pengirim,guser,gpass), encrypt_data(alamat_tujuan,guser,gpass), tanggal_pengiriman_sql))
                 db.commit()
                 cursor.execute("SELECT * FROM tAktivitasPengiriman ORDER BY id DESC LIMIT 1")
                 data_terakhir = cursor.fetchone()
@@ -145,7 +155,7 @@ def dashboard(user):
                 
                 if(pilih_metode == "1"):
                     resi = input("Masukkan resi yang ingin anda lacak: ")
-                    LacakDetailPengiriman(resi)
+                    LacakDetailPengiriman(resi,guser,gpass)
 
                 elif(pilih_metode == "2"):
                     print("=== Input QR Code ===\n")
@@ -153,11 +163,11 @@ def dashboard(user):
                     root.withdraw()
                     root.update()
                     file_path = askopenfilename(title="Select Image!", filetypes=[("Image Files", ".png;.jpg;*.jpeg")])
-                    hasil = read_qr_and_decrypt(file_path)
+                    hasil = read_qr_and_decrypt(file_path,guser,gpass)
                     data = json.loads(hasil)
                     nomor_resi = data['resi']
 
-                    LacakDetailPengiriman(nomor_resi)
+                    LacakDetailPengiriman(nomor_resi,guser,gpass)
                 else:
                     print("Pilih 1 di antara dua metode di atas!")
             else:
@@ -177,7 +187,7 @@ def dashboard(user):
                 all_pengiriman = cursor.fetchall()
 
                 for i in range(0, len(all_pengiriman)):
-                    print((i+1), ". Pengiriman", decrypt_data(all_pengiriman[i]['barang']), "kepada", all_pengiriman[i]['penerima'])
+                    print((i+1), ". Pengiriman", decrypt_data(all_pengiriman[i]['barang'],guser,gpass), "kepada", all_pengiriman[i]['penerima'])
                 print()
             elif pilihan == "2":
                 print("=== Semua Daftar Pengiriman  ===", "\n")
@@ -185,7 +195,7 @@ def dashboard(user):
                 all_pengiriman = cursor.fetchall()
 
                 for i in range(0, len(all_pengiriman)):
-                    print((i+1), ". Pengiriman", decrypt_data(all_pengiriman[i]['barang']), "kepada", all_pengiriman[i]['penerima'])
+                    print((i+1), ". Pengiriman", decrypt_data(all_pengiriman[i]['barang'],guser,gpass), "kepada", all_pengiriman[i]['penerima'])
                 print()
 
                 pilihan = int(input("Data pengiriman mana yang ingin anda hapus? : "))
@@ -226,7 +236,7 @@ def dashboard(user):
                     pesanan_yang_ada = cursor.fetchall()
 
                     for i in range(0, len(pesanan_yang_ada)):
-                        print((i+1), ". Pengiriman", decrypt_data(pesanan_yang_ada[i]['barang']), "ke", decrypt_data(pesanan_yang_ada[i]['alamat_tujuan']))
+                        print((i+1), ". Pengiriman", decrypt_data(pesanan_yang_ada[i]['barang'],guser,gpass), "ke", decrypt_data(pesanan_yang_ada[i]['alamat_tujuan'],guser,gpass))
                     print()
 
                     pilihan = int(input("Pesanan mana yang ingin anda ambil? : "))
@@ -251,7 +261,7 @@ def dashboard(user):
                 all_pengiriman = cursor.fetchall()
 
                 for i in range(0, len(all_pengiriman)):
-                    print((i+1), ". Pengiriman", decrypt_data(all_pengiriman[i]['barang']), "kepada", all_pengiriman[i]['penerima'])
+                    print((i+1), ". Pengiriman", decrypt_data(all_pengiriman[i]['barang'],guser,gpass), "kepada", all_pengiriman[i]['penerima'])
                     if (all_pengiriman[i]['tanggal_sampai'] is None):
                         print("Status Pengiriman: Sedang Diproses")
                     else:
@@ -263,7 +273,7 @@ def dashboard(user):
                 all_pengiriman = cursor.fetchall()
 
                 for i in range(0, len(all_pengiriman)):
-                    print((i+1), ". Pengiriman", decrypt_data(all_pengiriman[i]['barang']), "kepada", all_pengiriman[i]['penerima'])
+                    print((i+1), ". Pengiriman", decrypt_data(all_pengiriman[i]['barang'],guser,gpass), "kepada", all_pengiriman[i]['penerima'])
                 print()
 
                 lanjut = True
@@ -300,7 +310,7 @@ def dashboard(user):
                              cursor.execute("INSERT INTO tAktivitasPengiriman (id, status_pengiriman, lokasi, tPengiriman_no_resi) VALUES (%s, %s, %s, %s)", (1, status_pengiriman, lokasi_barang, resi_pengiriman))
                         db.commit()
                         print()
-                        print("Data terkait pengiriman", decrypt_data(all_pengiriman[urutan_pengiriman-1]['barang']), "kepada", all_pengiriman[urutan_pengiriman-1]['penerima'], "telah selesai diperbarui", "\n")
+                        print("Data terkait pengiriman", decrypt_data(all_pengiriman[urutan_pengiriman-1]['barang'],guser,gpass), "kepada", all_pengiriman[urutan_pengiriman-1]['penerima'], "telah selesai diperbarui", "\n")
             elif pilihan == "0":
                 kurir_lanjut = False
                 main()
