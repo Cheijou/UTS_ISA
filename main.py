@@ -177,7 +177,7 @@ def dashboard(user):
                 all_pengiriman = cursor.fetchall()
 
                 for i in range(0, len(all_pengiriman)):
-                    print((i+1), ". Pengiriman", all_pengiriman[i]['barang'], "kepada", all_pengiriman[i]['penerima'])
+                    print((i+1), ". Pengiriman", decrypt_data(all_pengiriman[i]['barang']), "kepada", all_pengiriman[i]['penerima'])
                 print()
             elif pilihan == "2":
                 print("=== Semua Daftar Pengiriman  ===", "\n")
@@ -185,7 +185,7 @@ def dashboard(user):
                 all_pengiriman = cursor.fetchall()
 
                 for i in range(0, len(all_pengiriman)):
-                    print((i+1), ". Pengiriman", all_pengiriman[i]['barang'], "kepada", all_pengiriman[i]['penerima'])
+                    print((i+1), ". Pengiriman", decrypt_data(all_pengiriman[i]['barang']), "kepada", all_pengiriman[i]['penerima'])
                 print()
 
                 pilihan = int(input("Data pengiriman mana yang ingin anda hapus? : "))
@@ -226,7 +226,7 @@ def dashboard(user):
                     pesanan_yang_ada = cursor.fetchall()
 
                     for i in range(0, len(pesanan_yang_ada)):
-                        print((i+1), ". Pengiriman", pesanan_yang_ada[i]['barang'], "ke", pesanan_yang_ada[i]['alamat_tujuan'])
+                        print((i+1), ". Pengiriman", decrypt_data(pesanan_yang_ada[i]['barang']), "ke", pesanan_yang_ada[i]['alamat_tujuan'])
                     print()
 
                     pilihan = int(input("Pesanan mana yang ingin anda ambil? : "))
@@ -251,7 +251,7 @@ def dashboard(user):
                 all_pengiriman = cursor.fetchall()
 
                 for i in range(0, len(all_pengiriman)):
-                    print((i+1), ". Pengiriman", all_pengiriman[i]['barang'], "kepada", all_pengiriman[i]['penerima'])
+                    print((i+1), ". Pengiriman", decrypt_data(all_pengiriman[i]['barang']), "kepada", all_pengiriman[i]['penerima'])
                     if (all_pengiriman[i]['tanggal_sampai'] is None):
                         print("Status Pengiriman: Sedang Diproses")
                     else:
@@ -263,7 +263,7 @@ def dashboard(user):
                 all_pengiriman = cursor.fetchall()
 
                 for i in range(0, len(all_pengiriman)):
-                    print((i+1), ". Pengiriman", all_pengiriman[i]['barang'], "kepada", all_pengiriman[i]['penerima'])
+                    print((i+1), ". Pengiriman", decrypt_data(all_pengiriman[i]['barang']), "kepada", all_pengiriman[i]['penerima'])
                 print()
 
                 lanjut = True
@@ -300,7 +300,7 @@ def dashboard(user):
                              cursor.execute("INSERT INTO tAktivitasPengiriman (id, status_pengiriman, lokasi, tPengiriman_no_resi) VALUES (%s, %s, %s, %s)", (1, status_pengiriman, lokasi_barang, resi_pengiriman))
                         db.commit()
                         print()
-                        print("Data terkait pengiriman", all_pengiriman[urutan_pengiriman-1]['barang'], "kepada", all_pengiriman[urutan_pengiriman-1]['penerima'], "telah selesai diperbarui", "\n")
+                        print("Data terkait pengiriman", decrypt_data(all_pengiriman[urutan_pengiriman-1]['barang']), "kepada", all_pengiriman[urutan_pengiriman-1]['penerima'], "telah selesai diperbarui", "\n")
             elif pilihan == "0":
                 kurir_lanjut = False
                 main()
