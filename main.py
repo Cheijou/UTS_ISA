@@ -2,7 +2,7 @@
 import mysql.connector
 import os
 from cryptography.fernet import Fernet
-from utils.encryption import encrypt,verify_password, decrypt
+from utils.hashing import hash_password,verify_password
 from utils.pdf_generator import generate_resi_pdf
 from utils.password_sensor import input_password
 from utils.buat_resi import generate_random_resi
@@ -39,10 +39,10 @@ def login():
 
 def register():
     print()
-    nama_lengkap = encrypt(input("Nama Lengkap : "))
+    nama_lengkap = hash_password(input("Nama Lengkap : "))
     username = input("Username: ")
-    password = encrypt(input_password())
-    no_telp = encrypt(input("Nomor Telpon : "))
+    password = hash_password(input_password())
+    no_telp = encrypt_data(input("Nomor Telpon : "))
     role = input("Anda adalah? (kurir/pengirim): ")
     print()
     cursor.execute("INSERT INTO tUsers (username, password,nama,nomor_telepon, role) VALUES (%s, %s, %s, %s, %s)", (username, password,nama_lengkap,no_telp,role))
@@ -56,7 +56,7 @@ def LacakDetailPengiriman(resi):
     print("\n", "=== Berikut merupakan detail pengirimannya ===", "\n")
     if(data_pengiriman['kurir'] is None):
         data_pengiriman['kurir'] = "Sedang Menunggu Kurir..."
-        
+
     print("Barang yang Dikirim : ", decrypt_data(data_pengiriman['barang']))
     print("Tanggal Pengiriman : ", data_pengiriman['tanggal_pengiriman'])
     print("Pengirim : ", data_pengiriman['pengirim'])
