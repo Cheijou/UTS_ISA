@@ -6,7 +6,7 @@ from utils.encryption import encrypt,verify_password, decrypt
 from utils.pdf_generator import generate_resi_pdf
 from utils.password_sensor import input_password
 from utils.buat_resi import generate_random_resi
-from utils.buat_qr import create_resi_qr, read_qr_and_decrypt, encrypt_data, decrypt_data
+from utils.aes_and_qr import create_resi_qr, read_qr_and_decrypt, encrypt_data, decrypt_data
 import tkinter as tk
 from tkinter.filedialog import askopenfilename
 import json
@@ -54,7 +54,9 @@ def LacakDetailPengiriman(resi):
     data_pengiriman = cursor.fetchone()
 
     print("\n", "=== Berikut merupakan detail pengirimannya ===", "\n")
-
+    if(data_pengiriman['kurir'] is None):
+        data_pengiriman['kurir'] = "Sedang Menunggu Kurir..."
+        
     print("Barang yang Dikirim : ", decrypt_data(data_pengiriman['barang']))
     print("Tanggal Pengiriman : ", data_pengiriman['tanggal_pengiriman'])
     print("Pengirim : ", data_pengiriman['pengirim'])
@@ -70,19 +72,20 @@ def LacakDetailPengiriman(resi):
 
     if cetak == "ya":
         data_pengiriman_pdf = {
-            "Barang yang Dikirim ": data_pengiriman['barang'],
+            "Barang yang Dikirim ": decrypt_data(data_pengiriman['barang']),
             "Tanggal Pengiriman": data_pengiriman['tanggal_pengiriman'],
             "Pengirim": data_pengiriman['pengirim'],
             "Penerima": data_pengiriman['penerima'],
-            "Alamat Pengirim ": data_pengiriman['alamat_pengirim'],
-            "Alamat Tujuan": data_pengiriman['alamat_tujuan'],
+            "Alamat Pengirim ": decrypt_data(data_pengiriman['alamat_pengirim']),
+            "Alamat Tujuan": decrypt_data(data_pengiriman['alamat_tujuan']),
             "Biaya Pengiriman": data_pengiriman['harga_pengiriman'],
             "Status Pengiriman": data_pengiriman['status_pengiriman'],
             "Kurir yang Bertugas": data_pengiriman['kurir'],
             "Lokasi Barang saat ini": data_pengiriman['lokasi']
         }
-        generate_resi_pdf(data_pengiriman_pdf)
-        print("Data pengiriman berhasil dicetak ke file 'data_pengiriman.pdf'", "\n")
+        nama_file = "data_pengiriman_"+resi+".pdf"
+        generate_resi_pdf(data_pengiriman_pdf,nama_file)
+        print("Data pengiriman berhasil dicetak ke file '",nama_file,"'\n")
 
 def dashboard(user):
     if user['role'] == 'Pengirim':
@@ -151,8 +154,9 @@ def dashboard(user):
                     file_path = askopenfilename(title="Select Image!", filetypes=[("Image Files", ".png;.jpg;*.jpeg")])
                     hasil = read_qr_and_decrypt(file_path)
                     data = json.loads(hasil)
+                    nomor_resi = data['resi']
 
-                    LacakDetailPengiriman[data['resi']]
+                    LacakDetailPengiriman(nomor_resi)
                 else:
                     print("Pilih 1 di antara dua metode di atas!")
             else:
