@@ -133,7 +133,7 @@ def dashboard(user):
                 print()
 
                 print("Pengiriman Anda Tercatat, resi anda -->",resi)
-                print("Resi anda dicetak dengan nama file -->",nama_file)
+                print("QR Resi anda dicetak dengan nama file -->",nama_file)
                 print("Resi dapat dicetak dengan opsi Lacak Resi -> Input QR Code", "\n")
                 
             elif pilihan == '2':
