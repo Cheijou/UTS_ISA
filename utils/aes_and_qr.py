@@ -1,60 +1,58 @@
-from Crypto.Cipher import AES
-from Crypto.Protocol.KDF import PBKDF2
+from Crypto.Cipher import AES 
 from pyzbar.pyzbar import decode
 from PIL import Image
 import base64
 import qrcode
+import random
+import string
 import json
-from Crypto.Random import get_random_bytes
 
-# Fungsi padding & unpadding agar data bisa di-enkripsi dalam AES CBC (16-byte blocks)
-def pad(data):
-    pad_len = 16 - len(data) % 16
-    return data + chr(pad_len) * pad_len
+def fix_key(key):
+    key = key.encode('utf-8')
+    if len(key) > 32:
+        return key[:32]  # Potong
+    elif len(key) < 32:
+        return key.ljust(32, b'\0')  # Isi null byte, bukan space
+    return key
 
-def unpad(data):
-    pad_len = ord(data[-1])
-    return data[:-pad_len]
-
-# Buat kunci dari username dan password (gunakan sebagai salt juga)
-def derive_key_from_username_password(username, password):
-    salt = username.encode('utf-8')
-    return PBKDF2(password, salt, dkLen=32, count=100000)
-
-# AES CBC Encryption/Decryption helper
+# AES Encryption Helper
 class AESCipher:
-    def __init__(self, username, password):
-        self.key = derive_key_from_username_password(username, password)
+    def __init__(self, key):
+        self.key = fix_key(key)
 
     def encrypt(self, raw):
-        raw_padded = pad(raw)
-        iv = get_random_bytes(16)
-        cipher = AES.new(self.key, AES.MODE_CBC, iv)
-        ciphertext = cipher.encrypt(raw_padded.encode())
-        combined = iv + ciphertext  # Hanya IV + data terenkripsi
-        return base64.b64encode(combined).decode()
+        cipher = AES.new(self.key, AES.MODE_EAX)
+        ciphertext, tag = cipher.encrypt_and_digest(raw.encode('utf-8'))
+        return base64.b64encode(cipher.nonce + tag + ciphertext).decode('utf-8')
 
-    def decrypt(self, enc_data):
+    def decrypt(self, data):
         try:
-            enc = base64.b64decode(enc_data.encode())
-            iv = enc[:16]
-            ciphertext = enc[16:]
-            cipher = AES.new(self.key, AES.MODE_CBC, iv)
-            decrypted = cipher.decrypt(ciphertext).decode('utf-8')
-            return unpad(decrypted)
+            enc = base64.b64decode(data.encode('utf-8'))
+            if len(enc) < 32:
+                raise ValueError("Data terlalu pendek untuk didekripsi")
+
+            nonce = enc[:16]  # Ambil nonce dari data yang telah didecode
+            tag = enc[16:32]  # Ambil tag
+            ciphertext = enc[32:]  # Ambil ciphertext
+            
+            # Dekripsi dengan AES.MODE_EAX
+            cipher = AES.new(self.key, AES.MODE_EAX, nonce)
+            return cipher.decrypt_and_verify(ciphertext, tag).decode('utf-8')
         except Exception as e:
             print("Error decrypting data:", e)
             return None
 
-# Buat QR berisi data terenkripsi dari nomor resi
-def create_resi_qr(resi="", username="", password=""):
+def create_resi_qr(resi = ""):
+
     data_detail = {
         "resi": resi,
     }
 
-    cipher = AESCipher(username, password)
+    # Encrypt the data
+    cipher = AESCipher("rahasia123")
     encrypted_data = cipher.encrypt(json.dumps(data_detail))
 
+    # Generate QR Code
     qr = qrcode.QRCode(box_size=10, border=4)
     qr.add_data(encrypted_data)
     qr.make(fit=True)
@@ -64,22 +62,31 @@ def create_resi_qr(resi="", username="", password=""):
     img.save(nama_file)
     return nama_file
 
-# Baca QR dan dekripsi isinya
-def read_qr_and_decrypt(path, username, password):
+def read_qr_and_decrypt(path):
     img = Image.open(path)
     decoded_objects = decode(img)
-
+    cipher = AESCipher("rahasia123")
+    
     for obj in decoded_objects:
         data = obj.data.decode('utf-8')
-        cipher = AESCipher(username, password)
-        decrypted = cipher.decrypt(data)
-        return decrypted
+        
+        # Decrypt QR Code content
+        decrypted_data = cipher.decrypt(data)
+        if decrypted_data:
+            return decrypted_data
+        else:
+            print("Failed to decrypt or invalid data.")
 
-# Encrypt dan decrypt manual (jika tidak lewat QR)
-def encrypt_data(plaintext, username, password):
-    cipher = AESCipher(username, password)
-    return cipher.encrypt(plaintext)
+def encrypt_data(plaintext):
+    cipher = AESCipher("rahasia123")
 
-def decrypt_data(ciphertext, username, password):
-    cipher = AESCipher(username, password)
-    return cipher.decrypt(ciphertext)
+    encrypted_text = cipher.encrypt(plaintext)
+
+    return encrypted_text
+
+def decrypt_data(ciphertext):
+    cipher = AESCipher("rahasia123")
+
+    decrypted_text = cipher.decrypt(ciphertext)
+
+    return decrypted_text
