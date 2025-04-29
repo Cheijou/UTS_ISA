@@ -212,7 +212,7 @@ def dashboard(user):
             if pilihan == '1':
                 cursor.execute("SELECT * FROM tPengiriman WHERE kurir = %s", (user['username'],), " and tanggal_sampai is NULL")
                 jumlah_belum_selesai= cursor.fetchall()
-                print(jumlah_belum_selesai)
+
                 cursor.execute("SELECT COUNT(*) FROM tPengiriman")
                 temp = cursor.fetchone()
                 total_pengiriman = temp['COUNT(*)']
