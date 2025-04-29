@@ -306,7 +306,7 @@ def dashboard(user):
 
 def main():
     while True:
-        print("=== Sistem Informasi Pengiriman Barang ===")
+        print("===== Selamat Datang di Aplikasi SangKirim! =====")
         print("1. Login")
         print("2. Register")
         print("0. Keluar", "\n")
