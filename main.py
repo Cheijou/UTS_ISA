@@ -226,7 +226,7 @@ def dashboard(user):
                     pesanan_yang_ada = cursor.fetchall()
 
                     for i in range(0, len(pesanan_yang_ada)):
-                        print((i+1), ". Pengiriman", decrypt_data(pesanan_yang_ada[i]['barang']), "ke", pesanan_yang_ada[i]['alamat_tujuan'])
+                        print((i+1), ". Pengiriman", decrypt_data(pesanan_yang_ada[i]['barang']), "ke", decrypt_data(pesanan_yang_ada[i]['alamat_tujuan']))
                     print()
 
                     pilihan = int(input("Pesanan mana yang ingin anda ambil? : "))
