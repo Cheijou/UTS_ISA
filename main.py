@@ -50,9 +50,9 @@ def register():
     print("Registrasi berhasil.", "\n")
 
 def LacakDetailPengiriman(resi):
-    cursor.execute("SELECT p.*, ap.status_pengiriman, ap.lokasi FROM tPengiriman p JOIN tAktivitasPengiriman ap on p.no_resi = ap.tPengiriman_no_resi WHERE p.no_resi = %s", (resi,), " ORDER BY ap.id DESC LIMIT 1")
-    data_pengiriman = cursor.fetchone()
+    cursor.execute("SELECT p.*, ap.status_pengiriman, ap.lokasi FROM tPengiriman p JOIN tAktivitasPengiriman ap ON p.no_resi = ap.tPengiriman_no_resi WHERE p.no_resi = %s ORDER BY ap.id DESC LIMIT 1",(resi,))
 
+    data_pengiriman = cursor.fetchone()
     print("\n", "=== Berikut merupakan detail pengirimannya ===", "\n")
     if(data_pengiriman['kurir'] is None):
         data_pengiriman['kurir'] = "Sedang Menunggu Kurir..."
@@ -210,16 +210,15 @@ def dashboard(user):
             pilihan = input("Pilih menu: ")
             print()
             if pilihan == '1':
-                cursor.execute("SELECT * FROM tPengiriman WHERE kurir = %s", (user['username'],), " and tanggal_sampai is NULL")
+                cursor.execute("SELECT * FROM tPengiriman WHERE kurir = %s AND tanggal_sampai is NULL",(user['username'],))
                 jumlah_belum_selesai= cursor.fetchall()
 
                 cursor.execute("SELECT COUNT(*) FROM tPengiriman")
                 temp = cursor.fetchone()
-                total_pengiriman = temp['COUNT(*)']
+                total_pengiriman = temp['COUNT(*)'] 
                 cursor.execute("SELECT COUNT(*) FROM tPengiriman WHERE kurir = %s ",(user['username'],))
                 temp2 = cursor.fetchone()
                 pengiriman_saya = temp2['COUNT(*)']
-
                 if not jumlah_belum_selesai:
                     print("=== Pesanan yang dapat Diambil ===", "\n")
                     cursor.execute("SELECT * FROM tPengiriman WHERE kurir is NULL")
