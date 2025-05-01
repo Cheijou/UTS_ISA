@@ -21,6 +21,7 @@ db = mysql.connector.connect(
 )
     
 cursor = db.cursor(dictionary=True)
+
 def login():
     print()
     username = input("Username: ")
@@ -31,10 +32,10 @@ def login():
     user = cursor.fetchone()
 
     if user and verify_password(password, user['password']):
-        print(f"Login berhasil sebagai {user['role']}", "\n")
+        print(f"Proses Login berhasil sebagai {user['role']}", "\n")
         return user
     else:
-        print("Login gagal.", "\n")
+        print("Proses Login gagal. Harap masukkan username dan password yang sesuai.", "\n")
         return None
 
 def register():
@@ -43,11 +44,11 @@ def register():
     username = input("Username: ")
     password = hash_password(input_password())
     no_telp = encrypt_data(input("Nomor Telpon : "))
-    role = input("Anda adalah? (kurir/pengirim): ")
+    role = input("Anda adalah? (Kurir / Pengirim): ")
     print()
     cursor.execute("INSERT INTO tUsers (username, password,nama,nomor_telepon, role) VALUES (%s, %s, %s, %s, %s)", (username, password,nama_lengkap,no_telp,role))
     db.commit()
-    print("Registrasi berhasil.", "\n")
+    print("Proses registrasi berhasil.", "\n")
 
 def LacakDetailPengiriman(resi):
     cursor.execute("SELECT p.*, ap.status_pengiriman, ap.lokasi FROM tPengiriman p JOIN tAktivitasPengiriman ap ON p.no_resi = ap.tPengiriman_no_resi WHERE p.no_resi = %s ORDER BY ap.id DESC LIMIT 1",(resi,))
@@ -135,7 +136,6 @@ def dashboard(user):
                 print("Pengiriman Anda Tercatat, resi anda -->",resi)
                 print("QR Resi anda dicetak dengan nama file -->",nama_file)
                 print("Resi dapat dicetak dengan opsi Lacak Resi -> Input QR Code", "\n")
-                
             elif pilihan == '2':
                 print("=== LACAK RESI ===", "\n")
                 print()
@@ -161,6 +161,7 @@ def dashboard(user):
                 else:
                     print("Pilih 1 di antara dua metode di atas!")
             else:
+                pengirim_lanjut = False
                 main()
     elif user['role'] == 'Admin':
         admin_lanjut = True
@@ -219,29 +220,36 @@ def dashboard(user):
                 cursor.execute("SELECT COUNT(*) FROM tPengiriman WHERE kurir = %s ",(user['username'],))
                 temp2 = cursor.fetchone()
                 pengiriman_saya = temp2['COUNT(*)']
+
                 if not jumlah_belum_selesai:
                     print("=== Pesanan yang dapat Diambil ===", "\n")
                     cursor.execute("SELECT * FROM tPengiriman WHERE kurir is NULL")
                     pesanan_yang_ada = cursor.fetchall()
 
-                    for i in range(0, len(pesanan_yang_ada)):
-                        print((i+1), ". Pengiriman", decrypt_data(pesanan_yang_ada[i]['barang']), "ke", decrypt_data(pesanan_yang_ada[i]['alamat_tujuan']))
-                    print()
+                    if not pesanan_yang_ada:
+                        print('Belum ada Pesanan Pengiriman yang Dapat Diambil.','\n')
+                    else:
+                        for i in range(0, len(pesanan_yang_ada)):
+                            print((i+1), ". Pengiriman", decrypt_data(pesanan_yang_ada[i]['barang']), "ke", decrypt_data(pesanan_yang_ada[i]['alamat_tujuan']))
+                        print()
 
-                    pilihan = int(input("Pesanan mana yang ingin anda ambil? : "))
-                    print()
-                    urutan_pengiriman = pilihan
+                        pilihan = int(input("Pesanan mana yang ingin anda ambil? : "))
+                        print()
+                        urutan_pengiriman = pilihan
 
-                    resi_pengiriman = pesanan_yang_ada[urutan_pengiriman-1]['no_resi']
+                        resi_pengiriman = pesanan_yang_ada[urutan_pengiriman-1]['no_resi']
 
-                    cursor.execute(
-                                    "UPDATE tPengiriman SET kurir = %s WHERE no_resi = %s",
-                                    (user['username'], resi_pengiriman))
-                    db.commit()
+                        cursor.execute(
+                                        "UPDATE tPengiriman SET kurir = %s WHERE no_resi = %s",
+                                        (user['username'], resi_pengiriman))
+                        db.commit()
 
-                    print("Pesanan berhasil diambil" + "\n")
+                        print("Pesanan berhasil diambil" + "\n")
                 elif pengiriman_saya == total_pengiriman:
                     print('Belum ada Pesanan Pengiriman.','\n')
+
+                    if jumlah_belum_selesai:
+                        print('Jangan lupa untuk menyelesaikan pesanan pengiriman yang telah anda ambil.', "\n")
                 else:
                     print("Harap selesaikan pesanan pengiriman yang telah anda ambil sebelumnya.", "\n")
             elif pilihan == '2':
@@ -258,48 +266,51 @@ def dashboard(user):
                     print()
             elif pilihan == '3':
                 print("=== Daftar Pesanan Pengiriman Barang ===", "\n")
-                cursor.execute("SELECT * FROM tPengiriman WHERE kurir = %s", (user['username'],))
+                cursor.execute("SELECT * FROM tPengiriman WHERE kurir = %s AND tanggal_sampai is NULL",(user['username'],))
                 all_pengiriman = cursor.fetchall()
 
-                for i in range(0, len(all_pengiriman)):
-                    print((i+1), ". Pengiriman", decrypt_data(all_pengiriman[i]['barang']), "kepada", all_pengiriman[i]['penerima'])
-                print()
+                if not all_pengiriman:
+                    print("Semua pesanan pengiriman yang anda tangani, telah selesai dikirim.", "\n")
+                else:
+                    for i in range(0, len(all_pengiriman)):
+                        print((i+1), ". Pengiriman", decrypt_data(all_pengiriman[i]['barang']), "kepada", all_pengiriman[i]['penerima'])
+                    print()
 
-                lanjut = True
+                    lanjut = True
 
-                while lanjut == True:
-                    pilihan = int(input("Data pengiriman mana yang ingin anda perbarui? : "))
-                    urutan_pengiriman = pilihan
+                    while lanjut == True:
+                        pilihan = int(input("Data pengiriman mana yang ingin anda perbarui? : "))
+                        urutan_pengiriman = pilihan
 
-                    resi_pengiriman = all_pengiriman[urutan_pengiriman-1]['no_resi']
+                        resi_pengiriman = all_pengiriman[urutan_pengiriman-1]['no_resi']
 
-                    print("\n", "=== Berikut merupakan data-data yang dapat anda perbarui ===", "\n")
+                        print("\n", "=== Berikut merupakan data-data yang dapat anda perbarui ===", "\n")
 
-                    status_pengiriman = input("Status Pengiriman (Dikirim / Diterima) : ")
+                        status_pengiriman = input("Status Pengiriman (Dikirim / Diterima) : ")
 
-                    if "kirim" in status_pengiriman:
-                        lokasi_barang = input("Lokasi Barang saat ini : ")
-                        lanjut = False
-                    elif "terima" in status_pengiriman:
-                        lokasi_barang = ""
-                        tgl_selesai = date.today()
-                        tgl_selesai_sql = tgl_selesai.isoformat()
-                        cursor.execute("UPDATE tPengiriman SET tanggal_sampai = %s WHERE no_resi = %s ",(tgl_selesai_sql, resi_pengiriman))
-                        lanjut = False
-                    else:
-                        print("Masukkan status pengiriman dengan benar!")
-
-                    cursor.execute("SELECT * FROM tAktivitasPengiriman ORDER BY id DESC LIMIT 1")
-                    id_terakhir = cursor.fetchone()
-                    
-                    if lanjut == False:
-                        if (id_terakhir is not None):
-                            cursor.execute("INSERT INTO tAktivitasPengiriman (id, status_pengiriman, lokasi, tPengiriman_no_resi) VALUES (%s, %s, %s, %s)", (id_terakhir['id'] + 1, status_pengiriman, lokasi_barang, resi_pengiriman))
+                        if "kirim" in status_pengiriman:
+                            lokasi_barang = input("Lokasi Barang saat ini : ")
+                            lanjut = False
+                        elif "terima" in status_pengiriman:
+                            lokasi_barang = ""
+                            tgl_selesai = date.today()
+                            tgl_selesai_sql = tgl_selesai.isoformat()
+                            cursor.execute("UPDATE tPengiriman SET tanggal_sampai = %s WHERE no_resi = %s ",(tgl_selesai_sql, resi_pengiriman))
+                            lanjut = False
                         else:
-                             cursor.execute("INSERT INTO tAktivitasPengiriman (id, status_pengiriman, lokasi, tPengiriman_no_resi) VALUES (%s, %s, %s, %s)", (1, status_pengiriman, lokasi_barang, resi_pengiriman))
-                        db.commit()
-                        print()
-                        print("Data terkait pengiriman", decrypt_data(all_pengiriman[urutan_pengiriman-1]['barang']), "kepada", all_pengiriman[urutan_pengiriman-1]['penerima'], "telah selesai diperbarui", "\n")
+                            print("Masukkan status pengiriman dengan benar!")
+
+                        cursor.execute("SELECT * FROM tAktivitasPengiriman ORDER BY id DESC LIMIT 1")
+                        id_terakhir = cursor.fetchone()
+                    
+                        if lanjut == False:
+                            if (id_terakhir is not None):
+                                cursor.execute("INSERT INTO tAktivitasPengiriman (id, status_pengiriman, lokasi, tPengiriman_no_resi) VALUES (%s, %s, %s, %s)", (id_terakhir['id'] + 1, status_pengiriman, lokasi_barang, resi_pengiriman))
+                            else:
+                                cursor.execute("INSERT INTO tAktivitasPengiriman (id, status_pengiriman, lokasi, tPengiriman_no_resi) VALUES (%s, %s, %s, %s)", (1, status_pengiriman, lokasi_barang, resi_pengiriman))
+                            db.commit()
+                            print()
+                            print("Data terkait pengiriman", decrypt_data(all_pengiriman[urutan_pengiriman-1]['barang']), "kepada", all_pengiriman[urutan_pengiriman-1]['penerima'], "telah selesai diperbarui", "\n")
             elif pilihan == "0":
                 kurir_lanjut = False
                 main()
@@ -320,6 +331,8 @@ def main():
             register()
         elif pilihan == '0':
             break
+        else:
+            print("Harap pilih menu di antara 1, 2, atau 0.", "\n")
 
 if __name__ == '__main__':
     main()
